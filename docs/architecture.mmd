@@ -1,0 +1,12 @@
+flowchart LR
+  subgraph GitHub
+    GH[GitHub Repo]\n(branches: dev/main)
+  end
+  GH -->|Webhook| Jenkins[Jenkins]
+  Jenkins -->|Push image| ECR[AWS ECR]
+  Jenkins -->|Terraform apply| Terraform[Terraform]
+  ECR --> ECS[AWS ECS Fargate Service]
+  Terraform --> ECS
+  ECS --> ALB[Application Load Balancer]
+  ALB --> Internet[(Users)]
+  ECS --> CloudWatch[CloudWatch Logs & Metrics]

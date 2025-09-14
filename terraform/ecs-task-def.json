@@ -1,0 +1,16 @@
+[
+  {
+    "name": "${service_name}",
+    "image": "${image}",
+    "essential": true,
+    "portMappings": [ { "containerPort": 8080, "hostPort": 8080 } ],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "/ecs/${service_name}",
+        "awslogs-region": "${region}",
+        "awslogs-stream-prefix": "ecs"
+      }
+    }
+  }
+]

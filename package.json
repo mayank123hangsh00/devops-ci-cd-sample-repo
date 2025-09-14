@@ -1,0 +1,8 @@
+{
+  "name": "devops-sample-app",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node -e \"console.log('no tests')\""
+  }
+}
