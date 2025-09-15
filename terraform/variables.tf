@@ -1,4 +1,4 @@
-variable "region" { default = "us-east-1" }
+variable "region" { default = "ap-south-1" }
 variable "aws_account_id" { type = string }
 variable "image_tag" { default = "latest" }
 variable "service_name" { default = "devops-sample-app" }
