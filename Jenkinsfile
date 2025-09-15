@@ -55,7 +55,11 @@ pipeline {
             set -e
             cd terraform
             terraform init -input=false
-            terraform apply -input=false -auto-approve -var "image_tag=${IMAGE_TAG}" -var "aws_account_id=${AWS_ACCOUNT_ID}"
+            terraform apply -input=false -auto-approve \
+              -var "image_tag=${IMAGE_TAG}" \
+              -var "aws_account_id=${AWS_ACCOUNT_ID}" \
+              -var "vpc_id=vpc-0d117a5cf094c9777" \
+              -var 'subnet_ids=["subnet-0966bab78e8556aac","subnet-0bbbc05e87102f723","subnet-02d79f61af69e8c25"]'
             cd ..
           '''
         }
@@ -75,5 +79,6 @@ pipeline {
     }
   }
 }
+
 
 
