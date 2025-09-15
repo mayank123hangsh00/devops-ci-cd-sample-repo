@@ -1,36 +1,20 @@
-# --- Fetch Default VPC & Subnets ---
-data "aws_vpc" "default" {
-  default = true
-}
-
-data "aws_subnets" "default" {
-  filter {
-    name   = "vpc-id"
-    values = [data.aws_vpc.default.id]
-  }
-}
-
-# --- ECR Repository ---
 resource "aws_ecr_repository" "this" {
   name = "devops-sample-app"
-
   lifecycle {
-    prevent_destroy = true   # Prevent accidental deletion
+    prevent_destroy = true
   }
 }
 
-# --- ECS Cluster ---
 resource "aws_ecs_cluster" "this" {
   name = "${var.service_name}-cluster"
 }
 
-# --- CloudWatch Logs ---
 resource "aws_cloudwatch_log_group" "ecs" {
   name              = "/ecs/${var.service_name}"
   retention_in_days = 14
 }
 
-# --- IAM Role for ECS Task Execution ---
+# IAM Role for ECS task execution
 resource "aws_iam_role" "ecs_task_exec" {
   name               = "ecsTaskExecutionRole-${var.service_name}"
   assume_role_policy = data.aws_iam_policy_document.ecs_assume_role.json
@@ -51,11 +35,11 @@ resource "aws_iam_role_policy_attachment" "ecs_task_exec_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-# --- Security Group ---
+# Security Group
 resource "aws_security_group" "sg" {
   name        = "${var.service_name}-sg"
   description = "Allow HTTP inbound"
-  vpc_id      = data.aws_vpc.default.id   # ✅ use default VPC
+  vpc_id      = var.vpc_id
 
   ingress {
     from_port   = 8080
@@ -72,11 +56,41 @@ resource "aws_security_group" "sg" {
   }
 
   lifecycle {
-    prevent_destroy = true   # ✅ Keep SG across pipeline runs
+    prevent_destroy = true
   }
 }
 
-# --- ECS Task Definition ---
+# Application Load Balancer
+resource "aws_lb" "app_lb" {
+  name               = "${var.service_name}-alb"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.sg.id]
+  subnets            = var.subnet_ids
+}
+
+# Target Group
+resource "aws_lb_target_group" "app_tg" {
+  name        = "${var.service_name}-tg"
+  port        = 8080
+  protocol    = "HTTP"
+  vpc_id      = var.vpc_id
+  target_type = "ip"
+}
+
+# Listener
+resource "aws_lb_listener" "app_listener" {
+  load_balancer_arn = aws_lb.app_lb.arn
+  port              = 80
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.app_tg.arn
+  }
+}
+
+# Task Definition
 resource "aws_ecs_task_definition" "this" {
   family                   = var.service_name
   cpu                      = "256"
@@ -92,7 +106,7 @@ resource "aws_ecs_task_definition" "this" {
   })
 }
 
-# --- ECS Service ---
+# ECS Service behind ALB
 resource "aws_ecs_service" "this" {
   name            = var.service_name
   cluster         = aws_ecs_cluster.this.id
@@ -101,8 +115,16 @@ resource "aws_ecs_service" "this" {
   launch_type     = "FARGATE"
 
   network_configuration {
-    subnets         = data.aws_subnets.default.ids   # ✅ use default subnets
+    subnets         = var.subnet_ids
     security_groups = [aws_security_group.sg.id]
     assign_public_ip = true
   }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.app_tg.arn
+    container_name   = var.service_name
+    container_port   = 8080
+  }
+
+  depends_on = [aws_lb_listener.app_listener]
 }
