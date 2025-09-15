@@ -1,5 +1,5 @@
 resource "aws_ecr_repository" "this" {
-  name = var.service_name
+  name = "devops-sample-app"
 
   lifecycle {
     prevent_destroy = true   # ✅ Prevent accidental deletion
