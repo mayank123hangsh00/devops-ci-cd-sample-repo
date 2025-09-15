@@ -2,7 +2,7 @@ resource "aws_ecr_repository" "this" {
   name = var.service_name
 
   lifecycle {
-    prevent_destroy = true
+    prevent_destroy = true   # ✅ Prevent accidental deletion
   }
 }
 
@@ -15,6 +15,11 @@ resource "aws_cloudwatch_log_group" "ecs" {
   retention_in_days = 14
 }
 
+resource "aws_iam_role" "ecs_task_exec" {
+  name               = "ecsTaskExecutionRole-${var.service_name}"
+  assume_role_policy = data.aws_iam_policy_document.ecs_assume_role.json
+}
+
 data "aws_iam_policy_document" "ecs_assume_role" {
   statement {
     actions = ["sts:AssumeRole"]
@@ -23,11 +28,6 @@ data "aws_iam_policy_document" "ecs_assume_role" {
       identifiers = ["ecs-tasks.amazonaws.com"]
     }
   }
-}
-
-resource "aws_iam_role" "ecs_task_exec" {
-  name               = "ecsTaskExecutionRole-${var.service_name}"
-  assume_role_policy = data.aws_iam_policy_document.ecs_assume_role.json
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_task_exec_policy" {
@@ -55,7 +55,7 @@ resource "aws_security_group" "sg" {
   }
 
   lifecycle {
-    prevent_destroy = true
+    prevent_destroy = true   # ✅ Keep SG across pipeline runs
   }
 }
 
@@ -87,5 +87,3 @@ resource "aws_ecs_service" "this" {
     assign_public_ip = true
   }
 }
-
-
