@@ -74,5 +74,3 @@ resource "aws_ecs_service" "this" {
   }
 }
 
-output "service_name" { value = aws_ecs_service.this.name }
-output "ecr_repo_url" { value = aws_ecr_repository.this.repository_url }
