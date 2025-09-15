@@ -1,5 +1,9 @@
 resource "aws_ecr_repository" "this" {
   name = var.service_name
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_ecs_cluster" "this" {
@@ -7,23 +11,23 @@ resource "aws_ecs_cluster" "this" {
 }
 
 resource "aws_cloudwatch_log_group" "ecs" {
-  name = "/ecs/${var.service_name}"
+  name              = "/ecs/${var.service_name}"
   retention_in_days = 14
-}
-
-resource "aws_iam_role" "ecs_task_exec" {
-  name = "ecsTaskExecutionRole-${var.service_name}"
-  assume_role_policy = data.aws_iam_policy_document.ecs_assume_role.json
 }
 
 data "aws_iam_policy_document" "ecs_assume_role" {
   statement {
     actions = ["sts:AssumeRole"]
     principals {
-      type = "Service"
+      type        = "Service"
       identifiers = ["ecs-tasks.amazonaws.com"]
     }
   }
+}
+
+resource "aws_iam_role" "ecs_task_exec" {
+  name               = "ecsTaskExecutionRole-${var.service_name}"
+  assume_role_policy = data.aws_iam_policy_document.ecs_assume_role.json
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_task_exec_policy" {
@@ -49,6 +53,10 @@ resource "aws_security_group" "sg" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_ecs_task_definition" "this" {
@@ -58,7 +66,12 @@ resource "aws_ecs_task_definition" "this" {
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   execution_role_arn       = aws_iam_role.ecs_task_exec.arn
-  container_definitions    = templatefile("${path.module}/ecs-task-def.json", { image = "${var.aws_account_id}.dkr.ecr.${var.region}.amazonaws.com/${var.service_name}:${var.image_tag}", service_name = var.service_name, region = var.region })
+
+  container_definitions = templatefile("${path.module}/ecs-task-def.json", {
+    image        = "${var.aws_account_id}.dkr.ecr.${var.region}.amazonaws.com/${var.service_name}:${var.image_tag}"
+    service_name = var.service_name
+    region       = var.region
+  })
 }
 
 resource "aws_ecs_service" "this" {
@@ -67,10 +80,12 @@ resource "aws_ecs_service" "this" {
   task_definition = aws_ecs_task_definition.this.arn
   desired_count   = 1
   launch_type     = "FARGATE"
+
   network_configuration {
     subnets         = var.subnet_ids
     security_groups = [aws_security_group.sg.id]
     assign_public_ip = true
   }
 }
+
 
