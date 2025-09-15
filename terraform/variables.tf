@@ -13,3 +13,8 @@ variable "image_tag" {
 variable "service_name" {
   default = "devops-sample-app"
 }
+variable "vpc_id" { 
+type = string }
+
+variable "subnet_ids" { 
+type = list(string) }
