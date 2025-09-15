@@ -2,15 +2,17 @@ pipeline {
   agent any
 
   environment {
-    AWS_REGION = 'ap-south-1'    
+    AWS_REGION     = 'ap-south-1'    
     AWS_ACCOUNT_ID = '889913637557'
-    IMAGE_TAG = "${env.BUILD_NUMBER ?: 'local'}"
-    VPC_ID = 'vpc-0d117a5cf094c9777'
-    SUBNET_IDS = '["subnet-0966bab78e8556aac","subnet-0bbbc05e87102f723","subnet-02d79f61af69e8c25"]'
+    IMAGE_TAG      = "${env.BUILD_NUMBER ?: 'local'}"
+
+    // Your VPC & Subnet IDs
+    VPC_ID     = 'vpc-0d117a5cf094c9777'
+    SUBNET_IDS = 'subnet-0966bab78e8556aac,subnet-0bbbc05e87102f723,subnet-02d79f61af69e8c25'
   }
 
   triggers {
-    pollSCM('H/5 * * * *')
+    pollSCM('H/5 * * * *') // Poll GitHub every 5 min if webhook fails
   }
 
   stages {
@@ -51,7 +53,7 @@ pipeline {
     stage('Deploy to ECS') {
       steps {
         withAWS(region: "${AWS_REGION}", credentials: 'aws-creds') {
-          sh """
+          sh '''
             set -e
             cd terraform
             terraform init -input=false
@@ -59,9 +61,9 @@ pipeline {
               -var "image_tag=${IMAGE_TAG}" \
               -var "aws_account_id=${AWS_ACCOUNT_ID}" \
               -var "vpc_id=${VPC_ID}" \
-              -var "subnet_ids=${SUBNET_IDS}"
+              -var 'subnet_ids=["subnet-0966bab78e8556aac","subnet-0bbbc05e87102f723","subnet-02d79f61af69e8c25"]'
             cd ..
-          """
+          '''
         }
       }
     }
@@ -72,10 +74,10 @@ pipeline {
       archiveArtifacts artifacts: 'logs/**', allowEmptyArchive: true
     }
     success {
-      echo 'Pipeline succeeded.'
+      echo '✅ Pipeline succeeded.'
     }
     failure {
-      echo 'Pipeline failed.'
+      echo '❌ Pipeline failed.'
     }
   }
 }
