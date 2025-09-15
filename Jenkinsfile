@@ -4,7 +4,6 @@ pipeline {
   environment {
     AWS_REGION = 'ap-south-1'    
     AWS_ACCOUNT_ID = '889913637557'
-    ECR_REPO = "${env.ECR_REPO ?: 'devops-sample-app'}"
     IMAGE_TAG = "${env.BUILD_NUMBER ?: 'local'}"
   }
 
@@ -31,7 +30,7 @@ pipeline {
     stage('Build Docker Image') {
       steps {
         script {
-          sh "docker build -t ${ECR_REPO}:${IMAGE_TAG} ."
+          sh "docker build -t devops-sample-app:${IMAGE_TAG} ."
         }
       }
     }
@@ -42,8 +41,8 @@ pipeline {
           sh '''
             set -e
             aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.$AWS_REGION.amazonaws.com
-            docker tag ${ECR_REPO}:${IMAGE_TAG} ${AWS_ACCOUNT_ID}.dkr.ecr.$AWS_REGION.amazonaws.com/${ECR_REPO}:${IMAGE_TAG}
-            docker push ${AWS_ACCOUNT_ID}.dkr.ecr.$AWS_REGION.amazonaws.com/${ECR_REPO}:${IMAGE_TAG}
+            docker tag devops-sample-app:${IMAGE_TAG} ${AWS_ACCOUNT_ID}.dkr.ecr.$AWS_REGION.amazonaws.com/devops-sample-app:${IMAGE_TAG}
+            docker push ${AWS_ACCOUNT_ID}.dkr.ecr.$AWS_REGION.amazonaws.com/devops-sample-app:${IMAGE_TAG}
           '''
         }
       }
@@ -76,4 +75,5 @@ pipeline {
     }
   }
 }
+
 
