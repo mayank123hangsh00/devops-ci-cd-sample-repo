@@ -5,11 +5,11 @@ pipeline {
     AWS_REGION = 'ap-south-1'    
     AWS_ACCOUNT_ID = '889913637557'
     IMAGE_TAG = "${env.BUILD_NUMBER ?: 'local'}"
+    VPC_ID = 'vpc-0d117a5cf094c9777'
+    SUBNET_IDS = '["subnet-0966bab78e8556aac","subnet-0bbbc05e87102f723","subnet-02d79f61af69e8c25"]'
   }
 
   triggers {
-    // GitHub webhook triggers this job
-    // Also support polling as fallback
     pollSCM('H/5 * * * *')
   }
 
@@ -51,17 +51,17 @@ pipeline {
     stage('Deploy to ECS') {
       steps {
         withAWS(region: "${AWS_REGION}", credentials: 'aws-creds') {
-          sh '''
+          sh """
             set -e
             cd terraform
             terraform init -input=false
             terraform apply -input=false -auto-approve \
               -var "image_tag=${IMAGE_TAG}" \
               -var "aws_account_id=${AWS_ACCOUNT_ID}" \
-              -var "vpc_id=vpc-0d117a5cf094c9777" \
-              -var 'subnet_ids=["subnet-0966bab78e8556aac","subnet-0bbbc05e87102f723","subnet-02d79f61af69e8c25"]'
+              -var "vpc_id=${VPC_ID}" \
+              -var "subnet_ids=${SUBNET_IDS}"
             cd ..
-          '''
+          """
         }
       }
     }
@@ -79,6 +79,3 @@ pipeline {
     }
   }
 }
-
-
-
