@@ -60,14 +60,3 @@ resource "aws_lb_listener" "app_listener" {
     target_group_arn = aws_lb_target_group.app_tg.arn
   }
 }
-
-# ✅ Outputs
-output "alb_dns_name" {
-  description = "The DNS name of the Application Load Balancer"
-  value       = aws_lb.app_alb.dns_name
-}
-
-output "alb_url" {
-  description = "Full URL to access the application via ALB"
-  value       = "http://${aws_lb.app_alb.dns_name}"
-}
