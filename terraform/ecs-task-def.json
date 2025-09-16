@@ -3,7 +3,12 @@
     "name": "${service_name}",
     "image": "${image}",
     "essential": true,
-    "portMappings": [ { "containerPort": 8080, "hostPort": 8080 } ],
+    "portMappings": [
+      {
+        "containerPort": 8080,
+        "protocol": "tcp"
+      }
+    ],
     "logConfiguration": {
       "logDriver": "awslogs",
       "options": {
