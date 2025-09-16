@@ -1,5 +1,5 @@
 output "ecr_repo_url" {
-  value = aws_ecr_repository.this.repository_url
+  value = local.ecr_repo_url
 }
 
 output "ecs_cluster_name" {
@@ -12,5 +12,5 @@ output "ecs_service_name" {
 
 output "alb_dns_name" {
   description = "Application Load Balancer DNS"
-  value       = aws_lb.app_lb.dns_name
+  value       = local.alb_dns_name
 }
