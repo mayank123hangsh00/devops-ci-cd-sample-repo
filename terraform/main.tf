@@ -1,7 +1,10 @@
 resource "aws_ecr_repository" "this" {
   name = "devops-sample-app"
+
+  # If repo already exists, Terraform won’t try to delete/recreate it
   lifecycle {
     prevent_destroy = true
+    ignore_changes  = [name]
   }
 }
 
@@ -12,12 +15,22 @@ resource "aws_ecs_cluster" "this" {
 resource "aws_cloudwatch_log_group" "ecs" {
   name              = "/ecs/${var.service_name}"
   retention_in_days = 14
+
+  lifecycle {
+    prevent_destroy = true
+    ignore_changes  = [name, retention_in_days]
+  }
 }
 
 # IAM Role for ECS task execution
 resource "aws_iam_role" "ecs_task_exec" {
   name               = "ecsTaskExecutionRole-${var.service_name}"
   assume_role_policy = data.aws_iam_policy_document.ecs_assume_role.json
+
+  lifecycle {
+    prevent_destroy = true
+    ignore_changes  = [name]
+  }
 }
 
 data "aws_iam_policy_document" "ecs_assume_role" {
@@ -35,18 +48,11 @@ resource "aws_iam_role_policy_attachment" "ecs_task_exec_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-# Security Group for ECS Service + ALB
+# Security Group
 resource "aws_security_group" "sg" {
   name        = "${var.service_name}-sg"
   description = "Allow HTTP inbound"
   vpc_id      = var.vpc_id
-
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
 
   ingress {
     from_port   = 8080
@@ -64,6 +70,7 @@ resource "aws_security_group" "sg" {
 
   lifecycle {
     prevent_destroy = true
+    ignore_changes  = [name, vpc_id]
   }
 }
 
@@ -113,7 +120,7 @@ resource "aws_ecs_task_definition" "this" {
   })
 }
 
-# ECS Service
+# ECS Service behind ALB
 resource "aws_ecs_service" "this" {
   name            = var.service_name
   cluster         = aws_ecs_cluster.this.id
@@ -122,8 +129,8 @@ resource "aws_ecs_service" "this" {
   launch_type     = "FARGATE"
 
   network_configuration {
-    subnets         = var.subnet_ids
-    security_groups = [aws_security_group.sg.id]
+    subnets          = var.subnet_ids
+    security_groups  = [aws_security_group.sg.id]
     assign_public_ip = true
   }
 
