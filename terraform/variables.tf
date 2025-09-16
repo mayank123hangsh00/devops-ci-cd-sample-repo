@@ -22,8 +22,8 @@ variable "subnet_ids" {
   type = list(string)
 }
 
+# Toggle to use existing ALB/TG or create new
 variable "use_existing" {
-  description = "If true, Terraform will read existing resources (ECR, SG, log group, IAM role, ALB/TG) by name instead of trying to create them."
-  type        = bool
-  default     = true
+  type    = bool
+  default = false
 }
