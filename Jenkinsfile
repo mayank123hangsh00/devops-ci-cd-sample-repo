@@ -2,69 +2,74 @@ pipeline {
     agent any
 
     environment {
-        AWS_DEFAULT_REGION = 'us-east-1'
-        AWS_ACCOUNT_ID     = credentials('aws-account-id')
-        AWS_ACCESS_KEY_ID  = credentials('aws-access-key-id')
-        AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
+        AWS_ACCOUNT_ID = "889913637557"
+        AWS_DEFAULT_REGION = "ap-south-1"
+        IMAGE_REPO_NAME = "devops-sample-app"
+        IMAGE_TAG = "latest"
+        ECR_REPO_URI = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com/${IMAGE_REPO_NAME}"
     }
 
     stages {
-        stage('Checkout') {
+        stage('Checkout Code') {
             steps {
-                echo "📥 Checking out source code..."
-                git branch: 'main', url: 'https://github.com/mayank123hangsh00/devops-ci-cd-sample-repo.git'
+                git branch: 'main',
+                    url: 'https://github.com/mayank123hangsh00/devops-ci-cd-sample-repo.git'
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Login to ECR') {
             steps {
-                echo "🐳 Building Docker image..."
-                sh 'docker build -t myapp:latest .'
+                script {
+                    sh """
+                    aws ecr get-login-password --region ${AWS_DEFAULT_REGION} | \
+                    docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com
+                    """
+                }
             }
         }
 
-        stage('Push to ECR') {
+        stage('Build & Push Docker Image') {
             steps {
-                echo "📤 Pushing Docker image to ECR..."
-                sh '''
-                    aws ecr get-login-password --region $AWS_DEFAULT_REGION \
-                    | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
-
-                    docker tag myapp:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/myapp:latest
-                    docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/myapp:latest
-                '''
+                script {
+                    sh """
+                    docker build -t ${IMAGE_REPO_NAME}:${IMAGE_TAG} .
+                    docker tag ${IMAGE_REPO_NAME}:${IMAGE_TAG} ${ECR_REPO_URI}:${IMAGE_TAG}
+                    docker push ${ECR_REPO_URI}:${IMAGE_TAG}
+                    """
+                }
             }
         }
 
-        stage('Terraform Init') {
+        stage('Terraform Init & Apply') {
             steps {
-                echo "⚙️ Terraform Init..."
-                sh 'cd infra && terraform init'
+                script {
+                    sh """
+                    cd terraform
+                    terraform init -input=false
+                    terraform apply -auto-approve -input=false
+                    """
+                }
             }
         }
 
-        stage('Terraform Apply') {
+        stage('Fetch ALB DNS') {
             steps {
-                echo "🚀 Deploying with Terraform..."
-                sh 'cd infra && terraform apply -auto-approve'
-            }
-        }
-
-        stage('Show URL') {
-            steps {
-                echo "🌍 Application URL:"
-                sh 'terraform output -raw app_url'
+                script {
+                    sh """
+                    cd terraform
+                    terraform output alb_dns_name
+                    """
+                }
             }
         }
     }
 
     post {
         success {
-            echo "✅ Pipeline completed successfully!"
+            echo "✅ Deployment successful! Visit the ALB DNS to test your app."
         }
         failure {
-            echo "❌ Pipeline failed. Check logs above."
-            archiveArtifacts artifacts: '**/terraform.tfstate', allowEmptyArchive: true
+            echo "❌ Pipeline failed. Check logs for details."
         }
     }
 }
