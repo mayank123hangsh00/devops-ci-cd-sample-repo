@@ -35,11 +35,18 @@ resource "aws_iam_role_policy_attachment" "ecs_task_exec_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-# Security Group
+# Security Group for ECS Service + ALB
 resource "aws_security_group" "sg" {
   name        = "${var.service_name}-sg"
   description = "Allow HTTP inbound"
   vpc_id      = var.vpc_id
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 
   ingress {
     from_port   = 8080
@@ -106,7 +113,7 @@ resource "aws_ecs_task_definition" "this" {
   })
 }
 
-# ECS Service behind ALB
+# ECS Service
 resource "aws_ecs_service" "this" {
   name            = var.service_name
   cluster         = aws_ecs_cluster.this.id
