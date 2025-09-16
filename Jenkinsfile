@@ -4,7 +4,7 @@ pipeline {
   environment {
     AWS_REGION     = 'ap-south-1'
     AWS_ACCOUNT_ID = '889913637557'
-    ECR_REPO       = "${env.ECR_REPO ?: 'devops-sample-app'}"
+    ECR_REPO       = 'devops-sample-app'
     IMAGE_TAG      = "${env.BUILD_NUMBER ?: 'local'}"
   }
 
@@ -57,11 +57,6 @@ pipeline {
             set -e
             cd terraform
 
-            echo "🔑 Exporting AWS creds for Terraform..."
-            export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
-            export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
-            export AWS_DEFAULT_REGION=$AWS_REGION
-
             echo "🚀 Running terraform init..."
             terraform init -input=false -no-color
 
@@ -69,9 +64,7 @@ pipeline {
             terraform apply -input=false -auto-approve -no-color \
               -var "aws_account_id=${AWS_ACCOUNT_ID}" \
               -var "image_tag=${IMAGE_TAG}" \
-              -var "service_name=devops-sample-app" \
-              -var "vpc_id=vpc-0d117a5cf094c9777" \
-              -var 'subnet_ids=["subnet-0966bab78e8556aac","subnet-0bbbc05e87102f723","subnet-02d79f61af69e8c25"]'
+              -var "service_name=devops-sample-app"
 
             echo "🌐 Fetching ALB DNS name..."
             terraform output -raw alb_dns_name > alb_dns.txt || true
