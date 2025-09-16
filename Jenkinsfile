@@ -9,77 +9,86 @@ pipeline {
   }
 
   triggers {
-    // Poll GitHub every 5 mins (or use webhook)
     pollSCM('H/5 * * * *')
   }
 
   stages {
     stage('Checkout') {
       steps {
-        echo "📥 Checking out source code..."
+        echo "📥 Checking out source..."
         checkout scm
+      }
+    }
+
+    stage('Build & Test') {
+      steps {
+        sh(script: '''
+          echo "🔧 npm ci (if present) and tests"
+          npm ci || true
+          npm test || true
+        ''')
       }
     }
 
     stage('Build Docker Image') {
       steps {
-        script {
+        sh(script: '''
           echo "🐳 Building Docker image..."
-          sh """
-            docker build -t ${ECR_REPO}:${IMAGE_TAG} .
-          """
-        }
+          docker --version || true
+          docker build -t ${ECR_REPO}:${IMAGE_TAG} .
+        ''')
       }
     }
 
     stage('Push to ECR') {
       steps {
         withAWS(region: "${AWS_REGION}", credentials: 'aws-creds') {
-          script {
-            echo "🔑 Logging in to Amazon ECR..."
-            sh """
-              aws ecr get-login-password --region ${AWS_REGION} | \
-              docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+          sh(script: '''
+            set -e
+            echo "🔑 Logging in to ECR..."
+            aws --version
+            aws ecr get-login-password --region $AWS_REGION \
+              | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.$AWS_REGION.amazonaws.com
 
-              echo "🏷 Tagging image..."
-              docker tag ${ECR_REPO}:${IMAGE_TAG} ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:${IMAGE_TAG}
+            echo "🏷 Tagging image..."
+            docker tag ${ECR_REPO}:${IMAGE_TAG} ${AWS_ACCOUNT_ID}.dkr.ecr.$AWS_REGION.amazonaws.com/${ECR_REPO}:${IMAGE_TAG}
 
-              echo "📤 Pushing image to ECR..."
-              docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:${IMAGE_TAG}
-            """
-          }
+            echo "📤 Pushing image..."
+            docker push ${AWS_ACCOUNT_ID}.dkr.ecr.$AWS_REGION.amazonaws.com/${ECR_REPO}:${IMAGE_TAG}
+          ''')
         }
       }
     }
 
-    stage('Deploy to ECS with Terraform') {
+    stage('Terraform Apply (deploy to ECS)') {
       steps {
         withAWS(region: "${AWS_REGION}", credentials: 'aws-creds') {
           dir('terraform') {
-            script {
-              sh """
-                echo "🔧 Initializing Terraform..."
-                terraform init -input=false -no-color
+            sh(script: '''
+              set -e
 
-                echo "🚀 Applying Terraform..."
-                terraform apply -input=false -auto-approve -no-color \
-                  -var aws_account_id=$AWS_ACCOUNT_ID \
-                  -var image_tag=$IMAGE_TAG \
-                  -var service_name=$ECR_REPO \
-                  -var vpc_id=vpc-0d117a5cf094c9777 \
-                  -var subnet_ids='["subnet-0966bab78e8556aac","subnet-0bbbc05e87102f723","subnet-02d79f61af69e8c25"]'
+              echo "🔧 terraform init..."
+              terraform init -input=false -no-color
 
-                echo "🌐 Fetching ALB DNS name..."
-                terraform output -raw alb_dns_name > alb_dns.txt || true
+              echo "🚀 terraform apply..."
+              terraform apply -input=false -auto-approve -no-color \
+                -var "aws_account_id=${AWS_ACCOUNT_ID}" \
+                -var "image_tag=${IMAGE_TAG}" \
+                -var "service_name=${ECR_REPO}" \
+                -var "vpc_id=vpc-0d117a5cf094c9777" \
+                -var "subnet_ids=[\"subnet-0966bab78e8556aac\",\"subnet-0bbbc05e87102f723\",\"subnet-02d79f61af69e8c25\"]" \
+                -var "use_existing=true"
 
-                if [ -f alb_dns.txt ]; then
-                  echo "✅ Application deployed successfully!"
-                  echo "👉 URL: http://$(cat alb_dns.txt)"
-                else
-                  echo "⚠ ALB DNS output not found."
-                fi
-              """
-            }
+              echo "🌐 fetching ALB DNS (terraform output)..."
+              terraform output -raw alb_dns_name > alb_dns.txt || true
+
+              if [ -s alb_dns.txt ]; then
+                echo "✅ ALB DNS:"
+                cat alb_dns.txt
+              else
+                echo "⚠ ALB DNS not present in Terraform outputs"
+              fi
+            ''')
           }
         }
       }
@@ -90,12 +99,7 @@ pipeline {
     always {
       archiveArtifacts artifacts: 'terraform/alb_dns.txt', allowEmptyArchive: true
     }
-    success {
-      echo "🎉 Pipeline completed successfully!"
-    }
-    failure {
-      echo "❌ Pipeline failed. Check logs above."
-    }
+    success { echo "🎉 Pipeline succeeded" }
+    failure { echo "❌ Pipeline failed — see console log" }
   }
 }
-
