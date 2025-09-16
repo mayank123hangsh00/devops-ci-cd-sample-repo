@@ -41,7 +41,7 @@ pipeline {
         stage('Terraform Init & Apply') {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', 
-                                  credentialsId: 'aws-credentials']]) {
+                                  credentialsId: 'aws-creds']]) {
                     sh '''
                         cd terraform
                         terraform init -input=false
@@ -54,7 +54,7 @@ pipeline {
         stage('Fetch ALB URL') {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', 
-                                  credentialsId: 'aws-credentials']]) {
+                                  credentialsId: 'aws-creds']]) {
                     sh '''
                         cd terraform
                         terraform output alb_url
