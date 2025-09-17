@@ -3,8 +3,8 @@ pipeline {
 
     environment {
         AWS_DEFAULT_REGION = "ap-south-1"
-        AWS_ACCOUNT_ID = "889913637557"
-        IMAGE_REPO = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com/devops-sample-app"
+        AWS_ACCOUNT_ID     = "889913637557"
+        IMAGE_REPO         = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com/devops-sample-app"
     }
 
     stages {
@@ -73,3 +73,4 @@ pipeline {
         }
     }
 }
+
