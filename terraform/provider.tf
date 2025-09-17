@@ -7,13 +7,17 @@ terraform {
       version = "~> 5.0"
     }
   }
+
+  backend "s3" {
+    bucket         = "my-terraform-backend-bucket"
+    key            = "devops-sample-app/terraform.tfstate"
+    region         = "ap-south-1"
+    dynamodb_table = "terraform-locks"
+  }
 }
 
-# Keep backend config here if you use S3/DynamoDB for remote state
-backend "s3" {
-  bucket         = "my-terraform-backend-bucket"
-  key            = "devops-sample-app/terraform.tfstate"
-  region         = "ap-south-1"
-  dynamodb_table = "terraform-locks"
+provider "aws" {
+  region = var.region
 }
+
 
