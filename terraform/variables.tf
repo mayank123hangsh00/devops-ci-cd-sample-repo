@@ -22,8 +22,7 @@ variable "subnet_ids" {
   type = list(string)
 }
 
-# Toggle to use existing ALB/TG or create new
-variable "use_existing" {
-  type    = bool
-  default = false
+variable "security_group_id" {
+  type = string
 }
+
