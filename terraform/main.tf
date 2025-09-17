@@ -1,34 +1,37 @@
-provider "aws" {
-  region = var.region
+# VPC, Subnets, Security Groups (using existing IDs)
+resource "aws_vpc" "main" {
+  id = "vpc-0d117a5cf094c9777"
 }
 
-# Reuse existing VPC & subnets
-data "aws_vpc" "main" {
-  id = var.vpc_id
+resource "aws_subnet" "subnet1" {
+  id = "subnet-0966bab78e8556aac"
 }
 
-data "aws_subnet" "selected" {
-  for_each = toset(var.subnet_ids)
-  id       = each.value
+resource "aws_subnet" "subnet2" {
+  id = "subnet-0bbbc05e87102f723"
 }
 
-data "aws_security_group" "ecs_sg" {
-  id = var.security_group_id
+resource "aws_subnet" "subnet3" {
+  id = "subnet-02d79f61af69e8c25"
+}
+
+resource "aws_security_group" "ecs_sg" {
+  id = "sg-08513895b5f933feb"
 }
 
 # ECR Repository
 resource "aws_ecr_repository" "app" {
-  name = var.service_name
+  name = "devops-sample-app"
 }
 
 # ECS Cluster
 resource "aws_ecs_cluster" "app_cluster" {
-  name = "${var.service_name}-cluster"
+  name = "devops-sample-app-cluster"
 }
 
 # IAM Role for ECS task execution
 resource "aws_iam_role" "ecs_task_execution" {
-  name = "${var.service_name}-ecsTaskExecutionRole"
+  name = "ecsTaskExecutionRole"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -51,50 +54,71 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_policy" {
 
 # ECS Task Definition
 resource "aws_ecs_task_definition" "app" {
-  family                   = "${var.service_name}-task"
+  family                   = "devops-sample-app-task"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = "256"
   memory                   = "512"
   execution_role_arn       = aws_iam_role.ecs_task_execution.arn
 
-  container_definitions = jsonencode([
-    {
-      name      = var.service_name
-      image     = "${aws_ecr_repository.app.repository_url}:${var.image_tag}"
-      essential = true
-      portMappings = [
-        {
-          containerPort = 3000
-          hostPort      = 3000
-        }
-      ]
-      logConfiguration = {
-        logDriver = "awslogs"
-        options = {
-          awslogs-group         = "/ecs/${var.service_name}"
-          awslogs-region        = var.region
-          awslogs-stream-prefix = "ecs"
-        }
+  container_definitions = jsonencode([{
+    name      = "devops-sample-app"
+    image     = "${aws_ecr_repository.app.repository_url}:latest"
+    essential = true
+    portMappings = [
+      {
+        containerPort = 3000
+        hostPort      = 3000
       }
-    }
-  ])
+    ]
+  }])
+}
+
+# ECS Service
+resource "aws_ecs_service" "app_service" {
+  name            = "devops-sample-app-service"
+  cluster         = aws_ecs_cluster.app_cluster.id
+  task_definition = aws_ecs_task_definition.app.arn
+  desired_count   = 1
+  launch_type     = "FARGATE"
+
+  network_configuration {
+    subnets          = [
+      aws_subnet.subnet1.id,
+      aws_subnet.subnet2.id,
+      aws_subnet.subnet3.id
+    ]
+    security_groups  = [aws_security_group.ecs_sg.id]
+    assign_public_ip = true
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.app_tg.arn
+    container_name   = "devops-sample-app"
+    container_port   = 3000
+  }
+
+  depends_on = [aws_lb_listener.front_end]
 }
 
 # ALB
 resource "aws_lb" "app_alb" {
-  name               = "${var.service_name}-alb"
+  name               = "devops-sample-app-alb"
   internal           = false
   load_balancer_type = "application"
-  security_groups    = [data.aws_security_group.ecs_sg.id]
-  subnets            = [for s in data.aws_subnet.selected : s.id]
+  security_groups    = [aws_security_group.ecs_sg.id]
+  subnets            = [
+    aws_subnet.subnet1.id,
+    aws_subnet.subnet2.id,
+    aws_subnet.subnet3.id
+  ]
 }
 
 resource "aws_lb_target_group" "app_tg" {
-  name     = "${var.service_name}-tg"
+  name     = "devops-sample-app-tg"
   port     = 3000
   protocol = "HTTP"
-  vpc_id   = data.aws_vpc.main.id
+  vpc_id   = aws_vpc.main.id
 
   health_check {
     path                = "/"
@@ -118,26 +142,8 @@ resource "aws_lb_listener" "front_end" {
   }
 }
 
-# ECS Service
-resource "aws_ecs_service" "app_service" {
-  name            = "${var.service_name}-service"
-  cluster         = aws_ecs_cluster.app_cluster.id
-  task_definition = aws_ecs_task_definition.app.arn
-  desired_count   = 1
-  launch_type     = "FARGATE"
-
-  network_configuration {
-    subnets          = [for s in data.aws_subnet.selected : s.id]
-    security_groups  = [data.aws_security_group.ecs_sg.id]
-    assign_public_ip = true
-  }
-
-  load_balancer {
-    target_group_arn = aws_lb_target_group.app_tg.arn
-    container_name   = var.service_name
-    container_port   = 3000
-  }
-
-  depends_on = [aws_lb_listener.front_end]
+output "alb_dns_name" {
+  value = aws_lb.app_alb.dns_name
 }
+
 
