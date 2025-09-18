@@ -22,8 +22,10 @@ variable "subnet_ids" {
   type = list(string)
 }
 
-variable "security_group_id" {
-  type = string
+variable "use_existing" {
+  type    = bool
+  default = false
 }
+
 
 
