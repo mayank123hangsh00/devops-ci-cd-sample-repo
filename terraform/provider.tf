@@ -1,18 +1,17 @@
 terraform {
+  backend "local" {
+    path = "terraform.tfstate"
+  }
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
   }
-  required_version = ">= 1.5.0"
-}
-
-  backend "local" {
-    path = "terraform.tfstate"
-  }
 }
 
 provider "aws" {
-  region = var.region
+  region = "ap-south-1"
 }
+
