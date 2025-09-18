@@ -1,5 +1,5 @@
 output "ecs_cluster_name" {
-  value = aws_ecs_cluster.this.name
+  value = aws_ecs_cluster.app.name
 }
 
 output "alb_dns_name" {
