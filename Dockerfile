@@ -4,7 +4,7 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --production=false
 COPY . .
-RUN npm run build || echo "no build step"
+# RUN npm run build || echo "no build step"
 
 # Production stage
 FROM node:18-alpine
