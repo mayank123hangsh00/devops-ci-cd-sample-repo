@@ -18,7 +18,8 @@ pipeline {
 
         stage('Login to ECR') {
             steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', 
+                                  credentialsId: 'aws-creds']]) {
                     sh '''
                         aws ecr get-login-password --region $AWS_DEFAULT_REGION \
                         | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
@@ -39,10 +40,11 @@ pipeline {
 
         stage('Terraform Init & Apply') {
             steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', 
+                                  credentialsId: 'aws-creds']]) {
                     sh '''
                         cd terraform
-                        terraform init -input=false
+                        terraform init -input=false -reconfigure
                         terraform apply -auto-approve -input=false
                     '''
                 }
@@ -51,10 +53,11 @@ pipeline {
 
         stage('Fetch ALB URL') {
             steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', 
+                                  credentialsId: 'aws-creds']]) {
                     sh '''
                         cd terraform
-                        terraform output alb_url
+                        terraform output alb_dns_name
                     '''
                 }
             }
@@ -70,4 +73,5 @@ pipeline {
         }
     }
 }
+
 
