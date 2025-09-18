@@ -1,13 +1,3 @@
-provider "aws" {
-  region = var.region
-}
-
-terraform {
-  backend "local" {
-    path = "terraform.tfstate"
-  }
-}
-
 # ECR Repository
 resource "aws_ecr_repository" "app" {
   name = var.service_name
@@ -158,8 +148,4 @@ resource "aws_ecs_service" "app" {
   depends_on = [aws_lb_listener.app]
 }
 
-# Outputs
-output "alb_dns_name" {
-  value = aws_lb.app.dns_name
-}
 
