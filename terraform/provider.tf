@@ -8,17 +8,15 @@ terraform {
     }
   }
 
-  backend "s3" {
-    bucket         = "my-terraform-backend-bucket"
-    key            = "devops-sample-app/terraform.tfstate"
-    region         = "us-east-1"   # ✅ match actual S3 bucket region
-    dynamodb_table = "terraform-locks"
+  backend "local" {
+    path = "terraform.tfstate"
   }
 }
 
 provider "aws" {
-  region = "ap-south-1"  # ✅ ECS infra region
+  region = var.region
 }
+
 
 
 
