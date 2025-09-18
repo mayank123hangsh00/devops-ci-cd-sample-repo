@@ -26,6 +26,11 @@ variable "use_existing" {
   type    = bool
   default = false
 }
+variable "security_group_id" {
+  description = "Security group ID for ECS tasks/ALB"
+  type        = string
+}
+
 
 
 
