@@ -11,7 +11,7 @@ resource "aws_cloudwatch_log_group" "ecs" {
 
 # ECS Cluster
 resource "aws_ecs_cluster" "app" {
-  name = "${var.app_name}-cluster"
+  name = "${var.service_name}-cluster"
 }
 
 # IAM Role for ECS Task Execution
