@@ -38,52 +38,31 @@ pipeline {
             }
         }
 
-        stage('Terraform Init') {
+        stage('Terraform Workflow') {
             steps {
+                // Wrap all Terraform stages in a single credentials block
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
                                   credentialsId: 'aws-creds']]) {
                     sh '''
                         cd terraform
+                        export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+                        export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+                        export AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION
+
+                        # Terraform init
                         rm -f .terraform.lock.hcl
                         terraform init -input=false -reconfigure -upgrade
-                    '''
-                }
-            }
-        }
 
-        stage('Terraform Import Existing Resources') {
-            steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
-                                  credentialsId: 'aws-creds']]) {
-                    sh '''
-                        cd terraform
+                        # Import existing resources (ignore errors if already imported)
                         terraform import aws_ecr_repository.app devops-sample-app || true
                         terraform import aws_cloudwatch_log_group.ecs /ecs/devops-sample-app || true
                         terraform import aws_security_group.app_sg sg-08513895b5f933feb || true
                         terraform import aws_lb_target_group.app arn:aws:elasticloadbalancing:ap-south-1:889913637557:targetgroup/devops-sample-app-tg/7375e34bfbb0dd85 || true
-                    '''
-                }
-            }
-        }
 
-        stage('Terraform Apply') {
-            steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
-                                  credentialsId: 'aws-creds']]) {
-                    sh '''
-                        cd terraform
+                        # Terraform apply
                         terraform apply -auto-approve -input=false
-                    '''
-                }
-            }
-        }
 
-        stage('Fetch ALB URL') {
-            steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
-                                  credentialsId: 'aws-creds']]) {
-                    sh '''
-                        cd terraform
+                        # Fetch ALB URL
                         terraform output alb_dns_name
                     '''
                 }
@@ -100,6 +79,7 @@ pipeline {
         }
     }
 }
+
 
 
 
