@@ -134,8 +134,8 @@ resource "aws_ecs_service" "app" {
   desired_count   = 1
 
   network_configuration {
-    subnets         = var.subnet_ids
-    security_groups = [aws_security_group.app_sg.id]
+    subnets          = var.subnet_ids
+    security_groups  = [aws_security_group.app_sg.id]
     assign_public_ip = true
   }
 
@@ -147,5 +147,6 @@ resource "aws_ecs_service" "app" {
 
   depends_on = [aws_lb_listener.app]
 }
+
 
 
