@@ -1,7 +1,7 @@
 pipeline {
     agent any
     tools {
-        git 'git'   // ✅ explicitly use the Git installation named "git"
+        git 'git'   // name must match what you configured in Jenkins Tools
     }
 
     environment {
@@ -41,14 +41,40 @@ pipeline {
             }
         }
 
-        stage('Terraform Init & Apply') {
+        stage('Terraform Init') {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
                                   credentialsId: 'aws-creds']]) {
                     sh '''
                         cd terraform
-                        rm -f .terraform.lock.hcl
+                        rm -f .terraform.lock.hcl   # cleanup old lock file
                         terraform init -input=false -reconfigure -upgrade
+                    '''
+                }
+            }
+        }
+
+        stage('Terraform Import Existing Resources') {
+            steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
+                                  credentialsId: 'aws-creds']]) {
+                    sh '''
+                        cd terraform
+                        terraform import aws_ecr_repository.app devops-sample-app || true
+                        terraform import aws_cloudwatch_log_group.ecs /ecs/devops-sample-app || true
+                        terraform import aws_security_group.app_sg sg-08513895b5f933feb || true
+                        terraform import aws_lb_target_group.app arn:aws:elasticloadbalancing:ap-south-1:889913637557:targetgroup/devops-sample-app-tg/7375e34bfbb0dd85 || true
+                    '''
+                }
+            }
+        }
+
+        stage('Terraform Apply') {
+            steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
+                                  credentialsId: 'aws-creds']]) {
+                    sh '''
+                        cd terraform
                         terraform apply -auto-approve -input=false
                     '''
                 }
@@ -77,3 +103,4 @@ pipeline {
         }
     }
 }
+
