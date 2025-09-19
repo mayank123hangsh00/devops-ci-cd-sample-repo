@@ -1,7 +1,7 @@
 pipeline {
     agent any
     tools {
-        git 'Default'
+        git 'git'   // ✅ explicitly use the Git installation named "git"
     }
 
     environment {
