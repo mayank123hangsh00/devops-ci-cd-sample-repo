@@ -1,5 +1,8 @@
 pipeline {
     agent any
+     tools {
+        git 'Default'   // name must match what you configured in Jenkins Tools
+    }
 
     environment {
         AWS_DEFAULT_REGION = "ap-south-1"
