@@ -1,7 +1,7 @@
 pipeline {
     agent any
-     tools {
-        git 'Default'   // name must match what you configured in Jenkins Tools
+    tools {
+        git 'Default'
     }
 
     environment {
@@ -47,7 +47,7 @@ pipeline {
                                   credentialsId: 'aws-creds']]) {
                     sh '''
                         cd terraform
-                        rm -f .terraform.lock.hcl   # 🔥 delete old lock file
+                        rm -f .terraform.lock.hcl
                         terraform init -input=false -reconfigure -upgrade
                         terraform apply -auto-approve -input=false
                     '''
@@ -77,7 +77,3 @@ pipeline {
         }
     }
 }
-
-
-
-
