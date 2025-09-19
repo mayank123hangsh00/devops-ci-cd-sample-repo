@@ -1,5 +1,6 @@
 output "ecs_cluster_name" {
-  value = aws_ecs_cluster.app.name
+  description = "ECS Cluster Name"
+  value       = aws_ecs_cluster.app.name
 }
 
 output "alb_dns_name" {
@@ -15,8 +16,8 @@ output "alb_url" {
 output "alb_target_group_arn" {
   description = "Target Group ARN"
   value       = aws_lb_target_group.app.arn
-
 }
+
 
 
 
