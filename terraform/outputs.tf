@@ -15,6 +15,7 @@ output "alb_url" {
 output "alb_target_group_arn" {
   description = "Target Group ARN"
   value       = aws_lb_target_group.app.arn
+
 }
 
 
