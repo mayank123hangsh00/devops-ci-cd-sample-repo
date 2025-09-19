@@ -1,8 +1,5 @@
 pipeline {
     agent any
-    tools {
-        git 'git'   // name must match what you configured in Jenkins Tools
-    }
 
     environment {
         AWS_DEFAULT_REGION = "ap-south-1"
@@ -43,8 +40,10 @@ pipeline {
 
         stage('Terraform Init') {
             steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
-                                  credentialsId: 'aws-creds']]) {
+                withCredentials([
+                    string(credentialsId: 'aws-access-key-id', variable: 'TF_VAR_aws_access_key_id'),
+                    string(credentialsId: 'aws-secret-access-key', variable: 'TF_VAR_aws_secret_access_key')
+                ]) {
                     sh '''
                         cd terraform
                         rm -f .terraform.lock.hcl   # cleanup old lock file
@@ -56,8 +55,10 @@ pipeline {
 
         stage('Terraform Import Existing Resources') {
             steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
-                                  credentialsId: 'aws-creds']]) {
+                withCredentials([
+                    string(credentialsId: 'aws-access-key-id', variable: 'TF_VAR_aws_access_key_id'),
+                    string(credentialsId: 'aws-secret-access-key', variable: 'TF_VAR_aws_secret_access_key')
+                ]) {
                     sh '''
                         cd terraform
                         terraform import aws_ecr_repository.app devops-sample-app || true
@@ -71,8 +72,10 @@ pipeline {
 
         stage('Terraform Apply') {
             steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
-                                  credentialsId: 'aws-creds']]) {
+                withCredentials([
+                    string(credentialsId: 'aws-access-key-id', variable: 'TF_VAR_aws_access_key_id'),
+                    string(credentialsId: 'aws-secret-access-key', variable: 'TF_VAR_aws_secret_access_key')
+                ]) {
                     sh '''
                         cd terraform
                         terraform apply -auto-approve -input=false
@@ -83,8 +86,10 @@ pipeline {
 
         stage('Fetch ALB URL') {
             steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
-                                  credentialsId: 'aws-creds']]) {
+                withCredentials([
+                    string(credentialsId: 'aws-access-key-id', variable: 'TF_VAR_aws_access_key_id'),
+                    string(credentialsId: 'aws-secret-access-key', variable: 'TF_VAR_aws_secret_access_key')
+                ]) {
                     sh '''
                         cd terraform
                         terraform output alb_dns_name
@@ -103,4 +108,5 @@ pipeline {
         }
     }
 }
+
 
