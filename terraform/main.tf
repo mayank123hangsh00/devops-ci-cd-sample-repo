@@ -55,8 +55,8 @@ resource "aws_ecs_task_definition" "app" {
     image     = "${var.aws_account_id}.dkr.ecr.${var.region}.amazonaws.com/${var.service_name}:${var.image_tag}"
     essential = true
     portMappings = [{
-      containerPort = 3000
-      hostPort      = 3000
+      containerPort = 8000
+      hostPort      = 8000
     }]
     logConfiguration = {
       logDriver = "awslogs"
